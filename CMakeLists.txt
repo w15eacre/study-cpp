@@ -5,10 +5,7 @@ set(SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 add_executable(${PROJECT_NAME} ${SOURCE_DIR}/main.cpp)
 target_compile_options(${PROJECT_NAME} PUBLIC -pipe -Wall -Wextra -pedantic-errors -pedantic -stdlib=libc++)
-set_target_properties(${PROJECT_NAME} PROPERTIES
-    CXX_STANDARD 20
-    CXX_STANDARD_REQUIRED YES
-)
+target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_20)
 
 add_subdirectory(thread_safe_queue)
 
