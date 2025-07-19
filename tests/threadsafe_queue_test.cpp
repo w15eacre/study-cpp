@@ -44,7 +44,6 @@ inline void PerformanceTest(std::string_view name, Func&& func) noexcept
     std::cout << "[ PERF ] [" << name << "]:  " << std::chrono::duration_cast<Unit>(finish - start) << std::endl;
 }
 
-
 } // namespace
 
 TEST_F(ThreadSafeQueueFixture, PushTryPopSingleThreadTest_ExpectTheSameOrder)
@@ -161,7 +160,6 @@ TEST_P(ThreadSafeQueueFixtureWithParams, ConcurrentPushAndWaitAndPopTest)
         } while (actuallyValuesCount.fetch_add(1, std::memory_order_relaxed) + 1 < params.dataCount * params.producerCount);
 
         queue.Shutdown();
-
     };
 
     for (auto _ : std::views::iota(0u, params.consumerCount))
@@ -186,13 +184,17 @@ INSTANTIATE_TEST_SUITE_P(
     ThreadSafeQueueFixtureWithParams,
     ::testing::Values(
         PerfTestParams{.name = "1p_1c_1kk", .dataCount = 1'000'000, .producerCount = 1, .consumerCount = 1},
-        PerfTestParams{.name = "2p_1c_1kk", .dataCount = 1'000'000, .producerCount = 2, .consumerCount = 1},
-        PerfTestParams{.name = "5p_1c_1kk", .dataCount = 1'000'000, .producerCount = 5, .consumerCount = 1},
+        PerfTestParams{.name = "2p_1c_1kk", .dataCount = 500'000, .producerCount = 2, .consumerCount = 1},
+        PerfTestParams{.name = "5p_1c_1kk", .dataCount = 200'000, .producerCount = 5, .consumerCount = 1},
+        PerfTestParams{.name = "10p_1c_1kk", .dataCount = 100'000, .producerCount = 10, .consumerCount = 1},
+        PerfTestParams{.name = "20p_1c_1kk", .dataCount = 50'000, .producerCount = 20, .consumerCount = 1},
 
         PerfTestParams{.name = "1p_2c_1kk", .dataCount = 1'000'000, .producerCount = 1, .consumerCount = 2},
         PerfTestParams{.name = "1p_5c_1kk", .dataCount = 1'000'000, .producerCount = 1, .consumerCount = 5},
         PerfTestParams{.name = "1p_10c_1kk", .dataCount = 1'000'000, .producerCount = 1, .consumerCount = 10},
-        PerfTestParams{.name = "1p_16c_1kk", .dataCount = 1'000'000, .producerCount = 1, .consumerCount = 16},
+        PerfTestParams{.name = "1p_20c_1kk", .dataCount = 1'000'000, .producerCount = 1, .consumerCount = 20},
 
-        PerfTestParams{.name = "2p_2c_1kk", .dataCount = 1'000'000, .producerCount = 2, .consumerCount = 2},
-        PerfTestParams{.name = "5p_5c_1kk", .dataCount = 1'000'000, .producerCount = 5, .consumerCount = 5}));
+        PerfTestParams{.name = "2p_2c_1kk", .dataCount = 500'000, .producerCount = 2, .consumerCount = 2},
+        PerfTestParams{.name = "5p_5c_1kk", .dataCount = 200'000, .producerCount = 5, .consumerCount = 5},
+        PerfTestParams{.name = "10p_10c_1kk", .dataCount = 100'000, .producerCount = 10, .consumerCount = 10},
+        PerfTestParams{.name = "20p_20c_1kk", .dataCount = 50'000, .producerCount = 20, .consumerCount = 20}));

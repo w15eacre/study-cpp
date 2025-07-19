@@ -50,7 +50,7 @@ public:
         }
 
         value = std::move(*headValue);
-        std::ignore = PopHead();
+        m_head = std::move(m_head->next);
     }
 
     bool TryPop(T &value)
@@ -63,8 +63,8 @@ public:
         }
 
         value = std::move(*headValue);
-
-        return PopHead();
+        m_head = std::move(m_head->next);
+        return true;
     }
 
     void WaitAndPop(T &value)
@@ -77,7 +77,7 @@ public:
         CheckStopped();
 
         value = std::move(*HeadData());
-        PopHead();
+        m_head = std::move(m_head->next);
     }
 
     void Shutdown() noexcept
@@ -127,18 +127,6 @@ private:
     {
         std::shared_lock lock{m_tailMutex};
         return m_tail;
-    }
-
-    bool PopHead()
-    {
-        if (IsEnd())
-        {
-            return false;
-        }
-
-        m_head = std::move(m_head->next);
-
-        return true;
     }
 
     const T *HeadData() const
