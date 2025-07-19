@@ -4,6 +4,7 @@ module;
 #include <condition_variable>
 #include <memory>
 #include <mutex>
+#include <shared_mutex>
 
 export module threadsafe_queue;
 
@@ -31,7 +32,7 @@ public:
 
         auto newNode = std::make_unique<Node>(std::move(value));
         {
-            std::scoped_lock lock{m_tailMutex};
+            std::unique_lock lock{m_tailMutex};
             m_tail->next = std::move(newNode);
             m_tail = m_tail->next.get();
         }
@@ -124,7 +125,7 @@ private:
 
     const Node *Tail() const
     {
-        std::scoped_lock lock{m_tailMutex};
+        std::shared_lock lock{m_tailMutex};
         return m_tail;
     }
 
@@ -161,7 +162,7 @@ private:
     mutable std::mutex m_headMutex{};
     std::unique_ptr<Node> m_head{};
 
-    mutable std::mutex m_tailMutex{};
+    mutable std::shared_mutex m_tailMutex{};
     Node *m_tail{};
 
     std::condition_variable m_conditionVariable{};
