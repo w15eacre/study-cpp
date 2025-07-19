@@ -1,5 +1,6 @@
 from conan import ConanFile
-from conan.tools.cmake import CMakeToolchain, CMakeDeps
+from conan.tools.cmake import CMakeToolchain
+from conan.tools.env import VirtualBuildEnv
 
 class StudyCppConan(ConanFile):
     name = "study_cpp"
@@ -10,6 +11,9 @@ class StudyCppConan(ConanFile):
     tool_requires = ["cmake/3.30.0", "ninja/1.11.1", "ccache/4.11"]
 
     def generate(self):
+        env = VirtualBuildEnv(self)
+        env.generate()
+        
         tc = CMakeToolchain(self)
         tc.generator = "Ninja"
         tc.variables["CMAKE_C_COMPILER"] = "clang"
