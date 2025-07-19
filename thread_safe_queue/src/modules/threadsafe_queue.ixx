@@ -27,8 +27,9 @@ public:
 
     void Push(T value)
     {
-        auto newNode = std::make_unique<Node>(std::move(value));
+        CheckStopped();
 
+        auto newNode = std::make_unique<Node>(std::move(value));
         {
             std::scoped_lock lock{m_tailMutex};
             m_tail->next = std::move(newNode);
@@ -69,13 +70,10 @@ public:
     {
         std::unique_lock lock{m_headMutex};
         m_conditionVariable.wait(lock, [this]() {
-            return m_stopped.load(std::memory_order_acquire) || m_head != Tail();
+            return m_stopped.load(std::memory_order::acquire) || !IsEnd();
         });
 
-        if (m_stopped)
-        {
-            throw std::runtime_error("ThreadSafeQueue is stopped");
-        }
+        CheckStopped();
 
         value = std::move(*HeadData());
         PopHead();
@@ -83,7 +81,35 @@ public:
 
     void Shutdown() noexcept
     {
-        m_stopped.store(true, std::memory_order_release);
+        {
+            // Shutdown must acquire m_headMutex to avoid a race condition with WaitAndPop.
+            //
+            // Scenario without the mutex:
+            //
+            // Thread 1 (consumer):
+            //   - Acquires m_headMutex
+            //   - Evaluates the predicate: (m_stopped == false && queue is empty)
+            //   - Predicate returns false, so it proceeds to wait
+            //
+            // Thread 2 (Shutdown):
+            //   - Sets m_stopped = true
+            //   - Calls notify_all()
+            //
+            // Now, Thread 1 goes to sleep — but it has already missed the notification.
+            // Result: Thread 1 will sleep forever.
+            //
+            // By holding m_headMutex in Shutdown, we guarantee that:
+            //
+            //   - Either the consumer sees m_stopped == true before waiting,
+            //   - Or it begins waiting only after notify_all() is issued.
+            //
+            // This ensures that no thread can miss the notification signal due to
+            // a race between the predicate check and notify_all().
+
+            std::unique_lock lock{m_headMutex};
+            m_stopped.store(true, std::memory_order_release);
+        }
+
         m_conditionVariable.notify_all();
     }
 private:
@@ -104,7 +130,7 @@ private:
 
     bool PopHead()
     {
-        if (m_head.get() == Tail())
+        if (IsEnd())
         {
             return false;
         }
@@ -116,12 +142,20 @@ private:
 
     const T *HeadData() const
     {
-        if (m_head.get() == Tail())
-        {
-            return nullptr;
-        }
+        return IsEnd() ? nullptr : m_head->next->data.get();
+    }
 
-        return m_head->next->data.get();
+    bool IsEnd() const
+    {
+        return m_head.get() == Tail();
+    }
+
+    void CheckStopped() const
+    {
+        if (m_stopped.load(std::memory_order::acquire))
+        {
+            throw std::runtime_error("ThreadSafeQueue has been stopped");
+        }
     }
 private:
     mutable std::mutex m_headMutex{};
