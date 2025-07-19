@@ -31,9 +31,13 @@ jobs:
     - name: Install dependencies
       run: conan install . --output-folder=${{github.workspace}}/build --build=missing -s build_type=${{env.BUILD_TYPE}} && source ${{github.workspace}}/build/conanbuild.sh
 
-    - name: Build
+    - name: Configure CMake
       # Build your program with the given configuration
       run: cmake -B ${{github.workspace}}/build -G Ninja -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/build/conan_toolchain.cmake
+
+    - name: Build all targets
+      # Build your program with the given configuration
+      run: cmake --build ${{github.workspace}}/build --parallel $(nproc) --target all
 
     - name: Test
       working-directory: ${{github.workspace}}/build
