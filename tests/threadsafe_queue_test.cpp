@@ -12,6 +12,8 @@ namespace {
 
 class ThreadSafeQueueFixture : public ::testing::Test
 {
+public:
+    ~ThreadSafeQueueFixture() noexcept = default;
 protected:
     threadsafe_queue::ThreadSafeQueue<int> queue{};
 };
@@ -27,7 +29,10 @@ struct PerfTestParams
 class ThreadSafeQueueFixtureWithParams
     : public ThreadSafeQueueFixture
     , public ::testing::WithParamInterface<PerfTestParams>
-{};
+{
+public:
+    ~ThreadSafeQueueFixtureWithParams() noexcept = default;
+};
 
 template <typename Unit>
 concept PerformanceUnit = std::is_same_v<Unit, std::chrono::milliseconds> || std::is_same_v<Unit, std::chrono::microseconds> ||

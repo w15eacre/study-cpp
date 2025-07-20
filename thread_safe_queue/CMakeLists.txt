@@ -6,7 +6,7 @@ set(MODULES_DIR ${SOURCE_DIR}/modules)
 
 add_library(${PROJECT_NAME})
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_20)
-target_compile_options(${PROJECT_NAME} PRIVATE -pipe -Wall -Wextra -pedantic-errors -pedantic -Wno-error=overriding-method-mismatch)
+target_compile_options(${PROJECT_NAME} PRIVATE -pipe -Wall -Wextra -pedantic-errors -pedantic)
 
 target_sources(${PROJECT_NAME}
     PUBLIC
