@@ -1,5 +1,7 @@
 # study-cpp 🧠💻
 
+![Nightly Build](https://github.com/w15eacre/study-cpp/actions/workflows/nightly.yml/badge.svg?branch=main)
+
 **An educational C++ repository exploring multithreading, C++20 features, and modern development practices.**  
 This project was created for self-learning purposes — as I read books and study new topics, I implement examples and write tests.
 
