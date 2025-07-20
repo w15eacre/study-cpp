@@ -20,7 +20,7 @@ jobs:
 
     strategy:
       matrix:
-        compiler: [clang]
+        compiler: [clang, gcc]
         arch: [x86_64]
 
     steps:
@@ -29,7 +29,11 @@ jobs:
     - name: Install compilers
       run: |
         sudo apt-get update -y
-        sudo apt-get install -y clang-18
+        if [ "${{ matrix.compiler }}" = "clang" ]; then
+          sudo apt-get install -y clang-18
+        else
+          sudo apt-get install -y gcc-13 g++-13
+        fi
 
     - name: Install Conan
       run: pipx install conan
