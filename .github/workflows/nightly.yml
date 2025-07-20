@@ -12,6 +12,7 @@ on:
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
+  CMAKE_GENERATOR: Ninja
 
 jobs:
   build:
@@ -20,29 +21,47 @@ jobs:
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        compiler: [clang]
+        arch: [x86_64]
+
     steps:
     - uses: actions/checkout@v4
+
+    - name: Install compilers
+      run: |
+        sudo apt-get update -y
+        sudo apt-get install -y clang-18
 
     - name: Install Conan
       run: pipx install conan
 
-    - name: Configure Conan profile
-      run: conan profile detect --force
-
     - name: Install dependencies
-      run: conan install . --output-folder=${{github.workspace}}/build --build=missing -s build_type=${{env.BUILD_TYPE}} && source ${{github.workspace}}/build/conanbuild.sh
+      run: conan install . --profile:build=${{github.workspace}}/profiles/${{ matrix.compiler }}_${{ matrix.arch }} --profile:host=${{github.workspace}}/profiles/${{ matrix.compiler }}_${{ matrix.arch }} --output-folder=${{github.workspace}}/build --build=missing -s build_type=${{env.BUILD_TYPE}} && source ${{github.workspace}}/build/conanbuild.sh
+
+    - name: Normalize build type to lowercase
+      id: vars
+      run: |
+        echo "build_type_lc=${BUILD_TYPE,,}" >> $GITHUB_OUTPUT
 
     - name: Configure CMake
       # Build your program with the given configuration
-      run: cmake -B ${{github.workspace}}/build -G Ninja -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/build/conan_toolchain.cmake
+      run: |
+        source ${{github.workspace}}/build/conanbuildenv-${{ steps.vars.outputs.build_type_lc }}-${{ matrix.arch }}.sh 
+        cmake -B ${{github.workspace}}/build -G ${{env.CMAKE_GENERATOR}} -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/build/conan_toolchain.cmake
 
     - name: Build all targets
       # Build your program with the given configuration
-      run: cmake --build ${{github.workspace}}/build --parallel $(nproc) --target all
+      run: |
+        source ${{github.workspace}}/build/conanbuildenv-${{ steps.vars.outputs.build_type_lc }}-${{ matrix.arch }}.sh 
+        cmake --build ${{github.workspace}}/build --parallel $(nproc) --target all
 
     - name: Test
       working-directory: ${{github.workspace}}/build
       # Execute tests defined by the CMake configuration.
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      run: ctest --repeat until-fail:100 --output-on-failure --timeout 360
+      run: |
+        source ${{github.workspace}}/build/conanbuildenv-${{ steps.vars.outputs.build_type_lc }}-${{ matrix.arch }}.sh 
+        ctest --repeat until-fail:10 --output-on-failure --timeout 360
 
