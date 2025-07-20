@@ -21,7 +21,7 @@ public:
     ThreadSafeQueue &operator=(const ThreadSafeQueue &other) = delete;
     ThreadSafeQueue &operator=(ThreadSafeQueue &&) = delete;
 
-    ~ThreadSafeQueue() noexcept
+    ~ThreadSafeQueue() noexcept(false)
     {
         Shutdown();
     }
@@ -80,7 +80,7 @@ public:
         m_head = std::move(m_head->next);
     }
 
-    void Shutdown() noexcept
+    void Shutdown()
     {
         {
             // Shutdown must acquire m_headMutex to avoid a race condition with WaitAndPop.
