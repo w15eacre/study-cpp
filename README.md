@@ -52,6 +52,34 @@ To run performance-specific tests:
 ctest -R gtest_thread_safe_queue_perf
 ```
 
+## How to build
+```bash
+conan install . \
+  --profile:build=profiles/<profile> \
+  --profile:host=profiles/<profile> \
+  --output-folder=<build dir> \
+  --build=missing \
+  -s build_type=<build type>
+
+source <build dir>/conanbuildenv-<lowercase build type>-<arch>.sh
+
+cmake -B <build dir> \
+  -G Ninja \
+  -DCMAKE_BUILD_TYPE=<build type> \
+  -DCMAKE_TOOLCHAIN_FILE=<build dir>/conan_toolchain.cmake
+
+cmake --build <build dir> --parallel <njobs> --target <target name>
+
+```
+
+## How to run test
+> Note: You need build the target
+
+```bash
+cd <build dir>
+ctest --output-on-failure
+```
+
 ---
 
 ## 📦 ThreadSafeQueue
