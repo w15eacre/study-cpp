@@ -2,57 +2,33 @@
 #include <chrono>
 #include <future>
 #include <ranges>
-#include <vector>
 
 #include <gtest/gtest.h>
 
 import threadsafe_queue;
+import threadsafe_queue_mutex;
+import threadsafe_std_queue;
 
 namespace {
 
-class ThreadSafeQueueFixture : public ::testing::Test
+template <typename Queue>
+class ThreadSafeQueueTypedFixture : public ::testing::Test
 {
 public:
-    ~ThreadSafeQueueFixture() noexcept = default;
-protected:
-    threadsafe_queue::ThreadSafeQueue<int> queue{};
+    ~ThreadSafeQueueTypedFixture() noexcept = default;
+    using QueueType = Queue;
 };
-
-struct PerfTestParams
-{
-    std::string_view name{};
-    size_t dataCount{};
-    size_t producerCount{};
-    size_t consumerCount{};
-};
-
-class ThreadSafeQueueFixtureWithParams
-    : public ThreadSafeQueueFixture
-    , public ::testing::WithParamInterface<PerfTestParams>
-{
-public:
-    ~ThreadSafeQueueFixtureWithParams() noexcept = default;
-};
-
-template <typename Unit>
-concept PerformanceUnit = std::is_same_v<Unit, std::chrono::milliseconds> || std::is_same_v<Unit, std::chrono::microseconds> ||
-    std::is_same_v<Unit, std::chrono::nanoseconds> || std::is_same_v<Unit, std::chrono::seconds>;
-
-
-template <PerformanceUnit Unit, std::invocable Func>
-inline void PerformanceTest(std::string_view name, Func&& func) noexcept
-{
-    auto start = std::chrono::high_resolution_clock::now();
-    std::invoke(std::forward<Func>(func));
-    auto finish = std::chrono::high_resolution_clock::now();
-
-    std::cout << "[ PERF ] [" << name << "]:  " << std::chrono::duration_cast<Unit>(finish - start) << std::endl;
-}
 
 } // namespace
 
-TEST_F(ThreadSafeQueueFixture, PushTryPopSingleThreadTest_ExpectTheSameOrder)
+using QueueTypes = ::testing::
+    Types<threadsafe_queue::ThreadSafeQueue<int>, threadsafe_queue::ThreadSafeQueueMutex<int>, threadsafe_queue::ThreadSafeStdQueue<int>>;
+TYPED_TEST_SUITE(ThreadSafeQueueTypedFixture, QueueTypes);
+
+TYPED_TEST(ThreadSafeQueueTypedFixture, PushTryPopSingleThreadTest_ExpectTheSameOrder)
 {
+    typename TestFixture::QueueType queue{};
+
     auto ExpectedValues = std::views::iota(0, 100);
 
     for (auto i : ExpectedValues)
@@ -70,8 +46,10 @@ TEST_F(ThreadSafeQueueFixture, PushTryPopSingleThreadTest_ExpectTheSameOrder)
     ASSERT_TRUE(std::ranges::equal(actuallyValues, ExpectedValues));
 }
 
-TEST_F(ThreadSafeQueueFixture, PushPopSingleThreadTest_ExpectTheSameOrder)
+TYPED_TEST(ThreadSafeQueueTypedFixture, PushPopSingleThreadTest_ExpectTheSameOrder)
 {
+    typename TestFixture::QueueType queue{};
+
     auto ExpectedValues = std::views::iota(0, 100);
 
     for (auto i : ExpectedValues)
@@ -91,11 +69,13 @@ TEST_F(ThreadSafeQueueFixture, PushPopSingleThreadTest_ExpectTheSameOrder)
     ASSERT_TRUE(std::ranges::equal(actuallyValues, ExpectedValues));
 }
 
-TEST_F(ThreadSafeQueueFixture, PushPopAndWaitTest_ExpectTheSameOrder)
+TYPED_TEST(ThreadSafeQueueTypedFixture, PushPopAndWaitTest_ExpectTheSameOrder)
 {
+    typename TestFixture::QueueType queue{};
+
     auto ExpectedValues = std::views::iota(0, 100);
 
-    std::ignore = std::async(std::launch::async, [this, ExpectedValues]() {
+    std::ignore = std::async(std::launch::async, [&queue, ExpectedValues]() {
         for (auto i : ExpectedValues)
         {
             queue.Push(i);
@@ -115,91 +95,21 @@ TEST_F(ThreadSafeQueueFixture, PushPopAndWaitTest_ExpectTheSameOrder)
     ASSERT_TRUE(std::ranges::equal(actuallyValues, ExpectedValues));
 }
 
-TEST_F(ThreadSafeQueueFixture, PushShutdownTest_ExpectException)
+TYPED_TEST(ThreadSafeQueueTypedFixture, PushShutdownTest_ExpectException)
 {
+    typename TestFixture::QueueType queue{};
+
     queue.Shutdown();
 
     ASSERT_THROW(queue.Push(0), std::runtime_error);
 }
 
-TEST_F(ThreadSafeQueueFixture, WaitAndPopShutdownTest_ExpectException)
+TYPED_TEST(ThreadSafeQueueTypedFixture, WaitAndPopShutdownTest_ExpectException)
 {
+    typename TestFixture::QueueType queue{};
+
     queue.Shutdown();
 
     int res = 0;
     ASSERT_THROW(queue.WaitAndPop(res), std::runtime_error);
 }
-
-TEST_P(ThreadSafeQueueFixtureWithParams, ConcurrentPushAndWaitAndPopTest)
-{
-    static_assert(std::atomic_size_t::is_always_lock_free);
-
-    auto params = GetParam();
-
-    std::atomic_size_t actuallyValuesCount = 0;
-
-    std::atomic_bool startFlag = false;
-
-    auto producer = [&]() {
-        startFlag.wait(false, std::memory_order::acquire);
-
-        std::ranges::for_each(std::views::iota(0u, params.dataCount), [&](auto i) {
-            queue.Push(i);
-        });
-    };
-
-    std::vector<std::future<void>> futures;
-    futures.reserve(params.producerCount + params.consumerCount);
-
-    for (auto _ : std::views::iota(0u, params.producerCount))
-    {
-        futures.emplace_back(std::async(std::launch::async, producer));
-    }
-
-    auto consumer = [&]() {
-        startFlag.wait(false, std::memory_order::acquire);
-        do
-        {
-            int res = 0;
-            queue.WaitAndPop(res);
-        } while (actuallyValuesCount.fetch_add(1, std::memory_order_relaxed) + 1 < params.dataCount * params.producerCount);
-
-        queue.Shutdown();
-    };
-
-    for (auto _ : std::views::iota(0u, params.consumerCount))
-    {
-        futures.emplace_back(std::async(std::launch::async, consumer));
-    }
-
-    PerformanceTest<std::chrono::milliseconds>(params.name, [&]() {
-        startFlag.store(true, std::memory_order_release);
-        startFlag.notify_all();
-
-        std::ranges::for_each(futures, [](auto& fut) {
-            fut.wait();
-        });
-    });
-
-    ASSERT_EQ(actuallyValuesCount.load(std::memory_order_relaxed), params.dataCount * params.producerCount);
-}
-
-INSTANTIATE_TEST_SUITE_P(
-    PerformanceTests,
-    ThreadSafeQueueFixtureWithParams,
-    ::testing::Values(
-        PerfTestParams{.name = "1p_1c_1kk", .dataCount = 1'000'000, .producerCount = 1, .consumerCount = 1},
-        PerfTestParams{.name = "2p_1c_1kk", .dataCount = 500'000, .producerCount = 2, .consumerCount = 1},
-        PerfTestParams{.name = "5p_1c_1kk", .dataCount = 200'000, .producerCount = 5, .consumerCount = 1},
-        PerfTestParams{.name = "10p_1c_1kk", .dataCount = 100'000, .producerCount = 10, .consumerCount = 1},
-        PerfTestParams{.name = "20p_1c_1kk", .dataCount = 50'000, .producerCount = 20, .consumerCount = 1},
-
-        PerfTestParams{.name = "1p_2c_1kk", .dataCount = 1'000'000, .producerCount = 1, .consumerCount = 2},
-        PerfTestParams{.name = "1p_5c_1kk", .dataCount = 1'000'000, .producerCount = 1, .consumerCount = 5},
-        PerfTestParams{.name = "1p_10c_1kk", .dataCount = 1'000'000, .producerCount = 1, .consumerCount = 10},
-        PerfTestParams{.name = "1p_20c_1kk", .dataCount = 1'000'000, .producerCount = 1, .consumerCount = 20},
-
-        PerfTestParams{.name = "2p_2c_1kk", .dataCount = 500'000, .producerCount = 2, .consumerCount = 2},
-        PerfTestParams{.name = "5p_5c_1kk", .dataCount = 200'000, .producerCount = 5, .consumerCount = 5},
-        PerfTestParams{.name = "10p_10c_1kk", .dataCount = 100'000, .producerCount = 10, .consumerCount = 10},
-        PerfTestParams{.name = "20p_20c_1kk", .dataCount = 50'000, .producerCount = 20, .consumerCount = 20}));

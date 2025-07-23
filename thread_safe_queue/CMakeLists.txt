@@ -14,4 +14,6 @@ target_sources(${PROJECT_NAME}
         BASE_DIRS ${MODULES_DIR}
         FILES
             ${MODULES_DIR}/threadsafe_queue.ixx
+            ${MODULES_DIR}/threadsafe_queue_mutex.ixx
+            ${MODULES_DIR}/threadsafe_std_queue.ixx
 )
