@@ -1,37 +1,36 @@
 module;
 
-#include <atomic>
 #include <condition_variable>
 #include <memory>
 #include <mutex>
 
-export module threadsafe_queue;
+export module threadsafe_queue_mutex;
 
 export namespace threadsafe_queue {
 
 template <typename T>
-class ThreadSafeQueue
+class ThreadSafeQueueMutex
 {
 public:
-    ThreadSafeQueue() : m_head(std::make_unique<Node>()), m_tail(m_head.get()) {};
+    ThreadSafeQueueMutex() : m_head(std::make_unique<Node>()), m_tail(m_head.get()) {};
 
-    ThreadSafeQueue(const ThreadSafeQueue &other) = delete;
-    ThreadSafeQueue(ThreadSafeQueue &&other) noexcept = delete;
-    ThreadSafeQueue &operator=(const ThreadSafeQueue &other) = delete;
-    ThreadSafeQueue &operator=(ThreadSafeQueue &&) = delete;
+    ThreadSafeQueueMutex(const ThreadSafeQueueMutex &other) = delete;
+    ThreadSafeQueueMutex(ThreadSafeQueueMutex &&other) noexcept = delete;
+    ThreadSafeQueueMutex &operator=(const ThreadSafeQueueMutex &other) = delete;
+    ThreadSafeQueueMutex &operator=(ThreadSafeQueueMutex &&) = delete;
 
-    ~ThreadSafeQueue() noexcept(false)
+    ~ThreadSafeQueueMutex() noexcept(false)
     {
         Shutdown();
     }
 
     void Push(T value)
     {
-        CheckStopped();
-
         auto newNode = std::make_unique<Node>(std::move(value));
         {
-            std::scoped_lock lock{m_tailMutex};
+            std::scoped_lock lock{m_mutex};
+            CheckStopped();
+
             m_tail->next = std::move(newNode);
             m_tail = m_tail->next.get();
         }
@@ -41,11 +40,11 @@ public:
 
     void Pop(T &value)
     {
-        std::scoped_lock lock{m_headMutex};
+        std::scoped_lock lock{m_mutex};
         auto headValue = HeadData();
         if (!headValue)
         {
-            throw std::runtime_error("ThreadSafeQueue is empty");
+            throw std::runtime_error("ThreadSafeQueueMutex is empty");
         }
 
         value = std::move(*headValue);
@@ -54,7 +53,7 @@ public:
 
     bool TryPop(T &value)
     {
-        std::scoped_lock lock{m_headMutex};
+        std::scoped_lock lock{m_mutex};
         auto headValue = HeadData();
         if (!headValue)
         {
@@ -68,9 +67,9 @@ public:
 
     void WaitAndPop(T &value)
     {
-        std::unique_lock lock{m_headMutex};
+        std::unique_lock lock{m_mutex};
         m_conditionVariable.wait(lock, [this]() {
-            return !IsEnd() || m_stopped.load(std::memory_order::acquire);
+            return !IsEnd() || m_stopped;
         });
 
         CheckStopped();
@@ -106,8 +105,8 @@ public:
             // This ensures that no thread can miss the notification signal due to
             // a race between the predicate check and notify_all().
 
-            std::unique_lock lock{m_headMutex};
-            m_stopped.store(true, std::memory_order_release);
+            std::unique_lock lock{m_mutex};
+            m_stopped = true;
         }
 
         m_conditionVariable.notify_all();
@@ -124,7 +123,6 @@ private:
 
     const Node *Tail() const
     {
-        std::scoped_lock lock{m_tailMutex};
         return m_tail;
     }
 
@@ -140,20 +138,18 @@ private:
 
     void CheckStopped() const
     {
-        if (m_stopped.load(std::memory_order::acquire))
+        if (m_stopped)
         {
-            throw std::runtime_error("ThreadSafeQueue has been stopped");
+            throw std::runtime_error("ThreadSafeQueueMutex has been stopped");
         }
     }
 private:
-    mutable std::mutex m_headMutex{};
+    mutable std::mutex m_mutex{};
     std::unique_ptr<Node> m_head{};
-
-    mutable std::mutex m_tailMutex{};
     Node *m_tail{};
 
     std::condition_variable m_conditionVariable{};
-    std::atomic<bool> m_stopped{false};
+    bool m_stopped{false};
 };
 
 } // namespace threadsafe_queue
