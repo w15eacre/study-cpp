@@ -6,6 +6,8 @@ module;
 
 export module threadsafe_queue_mutex;
 
+import threadsafe_queue_concept;
+
 export namespace threadsafe_queue {
 
 template <typename T>
@@ -151,5 +153,7 @@ private:
     std::condition_variable m_conditionVariable{};
     bool m_stopped{false};
 };
+
+static_assert(ThreadSafeQueueConcept<int, ThreadSafeQueueMutex>, "ThreadSafeQueueMutex does not satisfy the ThreadSafeQueueConcept");
 
 } // namespace threadsafe_queue

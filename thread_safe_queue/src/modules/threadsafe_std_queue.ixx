@@ -6,6 +6,8 @@ module;
 
 export module threadsafe_std_queue;
 
+import threadsafe_queue_concept;
+
 export namespace threadsafe_queue {
 
 template <typename T>
@@ -98,5 +100,7 @@ private:
 
     std::condition_variable m_conditionVariable{};
 };
+
+static_assert(ThreadSafeQueueConcept<int, ThreadSafeStdQueue>, "ThreadSafeStdQueue does not satisfy the ThreadSafeQueueConcept");
 
 } // namespace threadsafe_queue
