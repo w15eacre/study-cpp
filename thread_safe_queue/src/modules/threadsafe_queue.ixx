@@ -7,6 +7,8 @@ module;
 
 export module threadsafe_queue;
 
+import threadsafe_queue_concept;
+
 export namespace threadsafe_queue {
 
 template <typename T>
@@ -155,5 +157,7 @@ private:
     std::condition_variable m_conditionVariable{};
     std::atomic<bool> m_stopped{false};
 };
+
+static_assert(ThreadSafeQueueConcept<int, ThreadSafeQueue>, "ThreadSafeQueue does not satisfy the ThreadSafeQueueConcept");
 
 } // namespace threadsafe_queue
