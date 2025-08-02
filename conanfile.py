@@ -7,6 +7,9 @@ class StudyCppConan(ConanFile):
     version = "0.1"
     settings = "os", "arch", "compiler", "build_type"
     generators = "CMakeDeps"
+    default_options = {
+        "boost/*:without_cobalt": False,
+    }
 
     def build_requirements(self):
         self.tool_requires("cmake/3.30.0")
@@ -15,6 +18,7 @@ class StudyCppConan(ConanFile):
 
     def requirements(self):
         self.requires("gtest/1.16.0")
+        self.requires("boost/1.88.0")
 
     def generate(self):
         env = VirtualBuildEnv(self)
