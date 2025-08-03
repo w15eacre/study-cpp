@@ -2,6 +2,7 @@
 #include <chrono>
 #include <future>
 #include <ranges>
+#include <thread>
 
 #include <gtest/gtest.h>
 

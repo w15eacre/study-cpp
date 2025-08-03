@@ -40,6 +40,8 @@ co::main co_main(int argc, char* argv[])
             std::println("Received response: {}", response.value());
         }
         signal.emit(io::cancellation_type::all);
+
+        co_return EXIT_SUCCESS;
     }
     catch (std::exception& e)
     {
@@ -47,5 +49,5 @@ co::main co_main(int argc, char* argv[])
         signal.emit(io::cancellation_type::all);
     }
 
-    co_return 0;
+    co_return EXIT_FAILURE;
 }
