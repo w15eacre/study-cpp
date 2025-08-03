@@ -3,6 +3,7 @@ module;
 #include <condition_variable>
 #include <memory>
 #include <mutex>
+#include <stdexcept>
 
 export module threadsafe_queue_mutex;
 

@@ -3,8 +3,9 @@ arch=x86_64
 os=Linux
 build_type=Release
 compiler=clang
-compiler.version=18
-compiler.cppstd=20
+compiler.version=20
+compiler.cppstd=23
+compiler.libcxx=libc++
 
 [conf]
-tools.build:compiler_executables={ "c": "clang", "cpp": "clang++" }
+tools.build:compiler_executables={ "c": "clang-20", "cpp": "clang++-20" }
