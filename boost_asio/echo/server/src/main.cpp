@@ -18,14 +18,14 @@ co::main co_main(int argc, char* argv[])
     {
         auto server = echo_server::EchoServer(signal.slot(), io::ip::make_address("127.0.0.1"), 8080);
 
-        io::steady_timer timer(co_await co::this_coro::executor, 30s);
+        io::steady_timer timer(co_await co::this_coro::executor, 120s);
 
         auto task = server.Start();
         auto res = co_await co::race(timer.async_wait(co::use_op), task);
 
         if (!res)
         {
-            std::println("Server timed out after 30 seconds.");
+            std::println("Server timed out after 120 seconds.");
             signal.emit(io::cancellation_type::all);
         }
     }
