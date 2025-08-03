@@ -22,3 +22,6 @@ add_test(NAME ${TARGET_NAME}_queue_test COMMAND ${TARGET_NAME} --gtest_filter=Th
 add_test(NAME ${TARGET_NAME}_queue_perf COMMAND ${TARGET_NAME} --gtest_filter=PerformanceTests/*)
 
 add_test(NAME ${TARGET_NAME}_list_test COMMAND ${TARGET_NAME} --gtest_filter=ThreadSafeListTypedFixture/*.*)
+
+set(ECHO_SERVER_TEST "${CMAKE_CURRENT_SOURCE_DIR}/echo_server_test.sh")
+add_test(NAME ${TARGET_NAME}_echo_server_test COMMAND bash ${ECHO_SERVER_TEST} WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
