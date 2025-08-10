@@ -26,6 +26,15 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    # ---------------- Conan cache ----------------
+    - name: Cache Conan (v2)
+      uses: actions/cache@v4
+      with:
+        path: ~/.conan2
+        key: conan2-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.arch }}-${{ env.BUILD_TYPE }}-${{ hashFiles('conanfile.*', 'CMakeLists.txt', 'profiles/**') }}
+        restore-keys: |
+          conan2-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.arch }}-
+
     - name: Install compilers
       run: |
         sudo apt-get update -y
@@ -42,6 +51,18 @@ jobs:
 
     - name: Install dependencies
       run: conan install . --profile:build=${{github.workspace}}/profiles/${{ matrix.compiler }}_${{ matrix.arch }} --profile:host=${{github.workspace}}/profiles/${{ matrix.compiler }}_${{ matrix.arch }} --output-folder=${{github.workspace}}/build --build=missing -s build_type=${{env.BUILD_TYPE}}
+
+    - name: Install ccache
+      run: sudo apt-get install -y ccache
+
+    - name: Cache ccache
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ccache
+        key: ccache-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.arch }}-${{ env.BUILD_TYPE }}-${{ github.sha }}
+        restore-keys: |
+          ccache-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.arch }}-${{ env.BUILD_TYPE }}-
+          ccache-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.arch }}-
 
     - name: Normalize build type to lowercase
       id: vars
@@ -66,5 +87,5 @@ jobs:
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: |
         source ${{github.workspace}}/build/conanbuildenv-${{ steps.vars.outputs.build_type_lc }}-${{ matrix.arch }}.sh 
-        ctest -R gtest_thread_safe_queue$ --output-on-failure --timeout 60
+        ctest -R ^gtest_.*_test$ --output-on-failure --timeout 60
 

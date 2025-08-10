@@ -65,5 +65,5 @@ jobs:
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: |
         source ${{github.workspace}}/build/conanbuildenv-${{ steps.vars.outputs.build_type_lc }}-${{ matrix.arch }}.sh 
-        ctest -R gtest_thread_safe_queue$ --repeat until-fail:10 --output-on-failure --timeout 60
+        ctest -R ^gtest_.*_perf$ --repeat until-fail:10 --output-on-failure --timeout 60
 
