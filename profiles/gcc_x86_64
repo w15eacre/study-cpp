@@ -1,0 +1,11 @@
+[settings]
+arch=x86_64
+os=Linux
+build_type=Release
+compiler=gcc
+compiler.version=14.2
+compiler.cppstd=23
+compiler.libcxx=libstdc++
+
+[conf]
+tools.build:compiler_executables={ "c": "gcc", "cpp": "gcc" }

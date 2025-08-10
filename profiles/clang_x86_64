@@ -8,4 +8,4 @@ compiler.cppstd=23
 compiler.libcxx=libc++
 
 [conf]
-tools.build:compiler_executables={ "c": "clang-20", "cpp": "clang++-20" }
+tools.build:compiler_executables={ "c": "clang", "cpp": "clang++" }
