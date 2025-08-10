@@ -44,3 +44,16 @@
 build
 .vscode
 .cache
+
+# Environment files
+.envrc
+.env
+
+# Workspace files
+*.code-workspace
+
+# Preset files
+CMake*Presets.json
+
+# Flake files
+flake*
