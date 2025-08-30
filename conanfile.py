@@ -19,6 +19,7 @@ class StudyCppConan(ConanFile):
     def requirements(self):
         self.requires("gtest/1.16.0")
         self.requires("boost/1.88.0")
+        self.requires("benchmark/1.9.4")
 
     def generate(self):
         env = VirtualBuildEnv(self)
