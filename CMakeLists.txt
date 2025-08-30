@@ -7,3 +7,5 @@ add_subdirectory(boost_asio)
 
 enable_testing()
 add_subdirectory(tests)
+
+add_subdirectory(benchmarks)

@@ -99,5 +99,5 @@ jobs:
       run: |
         source ${{github.workspace}}/build/conanbuildenv-${{ steps.vars.outputs.build_type_lc }}-${{ matrix.arch }}.sh 
         ctest -R ^gtest_.*_test$ --repeat until-fail:10 --output-on-failure --timeout 60
-        ctest -R ^gtest_.*_perf$ --verbose
+        ctest -R ^study_cpp_bench$ --verbose
 
